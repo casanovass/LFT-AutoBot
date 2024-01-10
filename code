@@ -1,0 +1,133 @@
+import discord
+from discord.ext import commands
+
+intents = discord.Intents.default()
+intents.reactions = True
+intents.messages = True
+intents.message_content = True
+intents.typing = False
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+# Define el ID del canal
+canal_id = 965901141835665449
+
+@bot.event
+async def on_ready():
+    global mensaje_id
+    print(f'Bot conectado como {bot.user.name} ({bot.user.id})')
+    # Obtiene el canal usando el ID especificado
+    canal = bot.get_channel(canal_id)
+
+    # Envía el mensaje al canal
+    mensaje = await canal.send("# Comandos:\n"
+                               "- **!lft: añadirte a la lista**\n"
+                               "- **!leave: quitarte de la lista**\n"
+                               "- **!freeplayers: ver la lista de los jugadores sin equipo**\n")
+    # Guarda el ID del mensaje para usarlo más adelante.
+    mensaje_id = mensaje.id
+
+@bot.command()
+async def lft(ctx):
+    # Verifica si el nombre ya está en la lista.
+    if not esta_en_lista(ctx.author.display_name):
+        # Añade al jugador a la lista.
+        agregar_a_lista(ctx.author.display_name)
+        await ctx.send("Te has añadido a la lista de LFT.")
+        # Actualiza y envía la lista.
+        await actualizar_lista(ctx)
+    else:
+        await ctx.send("Ya estás en la lista de LFT.")
+
+@bot.command()
+async def leave(ctx):
+    # Quita al jugador de la lista.
+    quitar_de_lista(ctx.author.display_name)
+    await ctx.send("Te has quitado de la lista de LFT.")
+    # Actualiza y envía la lista.
+    await actualizar_lista(ctx)
+
+@bot.command()
+async def freeplayers(ctx):
+    # Obtiene la lista actualizada.
+    lista = obtener_lista()
+    if lista:
+        # Formatea la lista con el nuevo formato.
+        contenido = "# Lista de jugadores LFT (Agente libre):\n" + "\n".join([f"- **{nombre}**" for nombre in lista])
+        await ctx.send(contenido)
+    else:
+        await ctx.send("La lista de LFT está vacía.")
+
+@bot.command()
+async def vaciar(ctx):
+    # Vacía la lista.
+    vaciar_lista()
+    await ctx.send("La lista ha sido vaciada.")
+    # Actualiza y envía la lista.
+    await actualizar_lista(ctx)
+
+async def actualizar_lista(ctx):
+    try:
+        global mensaje_id
+        # Obtiene el canal usando el ID especificado
+        canal = bot.get_channel(canal_id)
+        mensaje = await canal.fetch_message(mensaje_id)
+
+        # Obtiene la lista actualizada.
+        lista = obtener_lista()
+
+        # Formatea la lista con el nuevo formato.
+        contenido = "# Lista de LFT (Agente libre):\n" + "\n".join([f"- **{nombre}**" for nombre in lista])
+
+        # Edita el mensaje con la nueva lista.
+        await mensaje.edit(content=contenido)
+
+        # Envía la lista actualizada por el canal.
+        await canal.send(contenido)
+    except Exception as e:
+        print(f"Error al actualizar la lista: {e}")
+        raise e
+
+def obtener_lista():
+    # Esta función debería obtener la lista desde una base de datos o cualquier otra fuente de datos.
+    # Aquí, simplemente la almacenaremos en un archivo de texto.
+    try:
+        with open("lista_lft.txt", "r") as archivo:
+            return archivo.read().splitlines()
+    except FileNotFoundError:
+        return []
+
+def agregar_a_lista(nombre):
+    # Esta función debería agregar el nombre a la lista en una base de datos o cualquier otra fuente de datos.
+    # Aquí, simplemente la añadiremos al archivo de texto si no está en la lista.
+    lista = obtener_lista()
+    if nombre not in lista:
+        lista.append(nombre)
+        guardar_lista(lista)
+
+def quitar_de_lista(nombre):
+    # Esta función debería quitar el nombre de la lista en una base de datos o cualquier otra fuente de datos.
+    # Aquí, simplemente lo eliminaremos del archivo de texto si está en la lista.
+    lista = obtener_lista()
+    if nombre in lista:
+        lista.remove(nombre)
+        guardar_lista(lista)
+
+def guardar_lista(lista):
+    # Esta función debería guardar la lista en una base de datos o cualquier otra fuente de datos.
+    # Aquí, simplemente la guardaremos en el archivo de texto.
+    with open("lista_lft.txt", "w") as archivo:
+        archivo.write("\n".join(lista))
+
+def vaciar_lista():
+    # Vacía la lista en el archivo de texto.
+    with open("lista_lft.txt", "w") as archivo:
+        archivo.write("")
+
+def esta_en_lista(nombre):
+    # Verifica si el nombre está en la lista.
+    lista = obtener_lista()
+    return nombre in lista
+
+# Ejecuta el bot con el token de tu bot.
+bot.run("MTE5NDAzMDYzMzA2NDg2MTc5OA.GXDwPc.gDykRsbL3_tftBFbtKMIQYwDU1fg9cJz_bbs1g")
